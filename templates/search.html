@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="search-card feed-card">
+    <h2>Поиск</h2>
+    <form action="{{ url_for('search') }}" method="GET" class="search-form">
+        <input type="search" name="q" value="{{ q }}" placeholder="Ник пользователя или #тег" class="search-input">
+        <button type="submit" class="btn-primary">Искать</button>
+    </form>
+</div>
+
+{% if q %}
+{% if users %}
+<div class="search-section feed-card">
+    <h3>Пользователи</h3>
+    <ul class="search-users">
+        {% for u in users %}
+        <li>
+            <a href="{{ url_for('profile', username=u.username) }}" class="search-user-item">
+                <div class="mini-avatar">
+                    <img src="{{ url_for('static', filename='uploads/avatars/' + u.avatar) }}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ u.username }}&size=40&background=25262a&color=8a8d91';">
+                </div>
+                <span>{{ u.username }}</span>
+                {% if u.is_verified %}
+                    {% if u.verification_type == 'vip' %}<span class="badge badge-vip"></span>{% endif %}
+                    {% if u.verification_type == 'exclusive' %}<img src="{{ url_for('static', filename='images/galochka.png') }}" class="badge-exclusive-img" alt="">{% endif %}
+                {% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if posts %}
+<div class="search-section feed-card">
+    <h3>Посты</h3>
+    {% for post in posts %}
+    <div class="search-post-preview">
+        <a href="{{ url_for('profile', username=post.user.username) }}">{{ post.user.username }}</a>: {{ post.body[:100] }}{% if post.body|length > 100 %}...{% endif %}
+        <a href="{{ url_for('index') }}#post-{{ post.id }}">Перейти</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if not users and not posts %}
+<p class="text-dim">Ничего не найдено.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

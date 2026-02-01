@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-card">
+    <h2>Жалобы</h2>
+    <p class="text-dim">Простить — отклонить жалобу. Забанить — заблокировать пользователя на 5 часов.</p>
+    {% for r in reports %}
+    <div class="request-item report-item">
+        <div>
+            <strong><a href="{{ url_for('profile', username=r.reporter.username) }}">{{ r.reporter.username }}</a></strong> пожаловался на
+            <strong><a href="{{ url_for('profile', username=r.reported.username) }}">{{ r.reported.username }}</a></strong>
+            <span class="notif-time">{{ r.created_at|time_ago }}</span>
+            {% if r.reason %}<p class="request-reason">{{ r.reason }}</p>{% endif %}
+        </div>
+        <div class="request-actions">
+            <a href="{{ url_for('admin_report_forgive', report_id=r.id) }}" class="vip-link">Простить</a>
+            <span class="text-dim"> · </span>
+            <a href="{{ url_for('admin_report_ban', report_id=r.id) }}" class="reject-link">Забанить 5ч</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% if not reports %}
+    <p class="text-dim">Нет жалоб.</p>
+    {% endif %}
+</div>
+<p><a href="{{ url_for('admin_panel') }}" class="auth-link">← Заявки на верификацию</a></p>
+{% endblock %}

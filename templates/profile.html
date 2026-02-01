@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="profile-header feed-card">
+    <div class="avatar-container">
+        <img src="{{ url_for('static', filename='uploads/avatars/' + user.avatar) }}" alt="{{ user.username }}" onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&size=120&background=25262a&color=8a8d91';">
+    </div>
+    <div class="profile-info">
+        <h1>
+            {{ user.username }}
+            {% if user.is_verified %}
+                {% if user.verification_type == 'gold' %}<span class="badge badge-gold"></span>{% endif %}
+                {% if user.verification_type == 'vip' %}<span class="badge badge-vip"></span>{% endif %}
+                {% if user.verification_type == 'exclusive' %}<img src="{{ url_for('static', filename='images/galochka.png') }}" class="badge-exclusive-img" alt="">{% endif %}
+            {% endif %}
+            {% if user.is_admin %}<span class="badge-admin">Админ</span>{% endif %}
+        </h1>
+        {% if user.custom_status %}<p class="custom-status">{{ user.custom_status }}</p>{% endif %}
+        <p class="username">@{{ user.username }}</p>
+        {% if user.bio %}<p class="bio">{{ user.bio }}</p>{% endif %}
+        <div class="profile-stats">
+            <span><strong>{{ user.posts_count() }}</strong> постов</span>
+            <a href="{{ url_for('followers', username=user.username) }}" class="profile-stat-link"><span><strong>{{ user.followers_count() }}</strong> подписчиков</span></a>
+            <a href="{{ url_for('following', username=user.username) }}" class="profile-stat-link"><span><strong>{{ user.following_count() }}</strong> подписок</span></a>
+        </div>
+        {% if current_user.id == user.id %}
+            <a href="{{ url_for('settings') }}" class="edit-btn">Редактировать профиль</a>
+        {% else %}
+            <button type="button" class="edit-btn follow-btn {% if is_following %}following{% endif %}" data-user-id="{{ user.id }}">{% if is_following %}Отписаться{% else %}Подписаться{% endif %}</button>
+            <a href="{{ url_for('chat', user_id=user.id) }}" class="edit-btn btn-chat">Написать</a>
+            <button type="button" class="edit-btn btn-block {% if is_blocking %}blocking{% endif %}" data-user-id="{{ user.id }}">{% if is_blocking %}Разблокировать{% else %}Заблокировать{% endif %}</button>
+            <a href="#" class="edit-btn btn-report" data-report-user-id="{{ user.id }}">Пожаловаться</a>
+        {% endif %}
+        {% if current_user.is_admin and current_user.id != user.id %}
+        <div class="profile-admin-block feed-card">
+            <h3>Админ</h3>
+            <p class="text-dim">Галочка:</p>
+            <div class="admin-actions">
+                <a href="{{ url_for('admin_grant_verification', user_id=user.id, v_type='gold') }}" class="btn-sm {% if user.verification_type == 'gold' %}active{% endif %}">Золотая</a>
+                <a href="{{ url_for('admin_grant_verification', user_id=user.id, v_type='vip') }}" class="btn-sm {% if user.verification_type == 'vip' %}active{% endif %}">Синяя</a>
+                <a href="{{ url_for('admin_grant_verification', user_id=user.id, v_type='exclusive') }}" class="btn-sm {% if user.verification_type == 'exclusive' %}active{% endif %}">Розовая</a>
+                <a href="{{ url_for('admin_grant_verification', user_id=user.id, v_type='none') }}" class="btn-sm">Забрать</a>
+            </div>
+            <p class="text-dim">Статус:</p>
+            <form method="POST" action="{{ url_for('admin_set_status', user_id=user.id) }}" class="admin-status-form">
+                <select id="status-select" class="status-select">
+                    <option value="">— Выбери или введи ниже —</option>
+                    {% for s in predefined_statuses %}
+                    <option value="{{ s }}" {% if user.custom_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="custom_status" id="status-input" value="{{ user.custom_status or '' }}" placeholder="Свой статус" maxlength="100">
+                <button type="submit" class="btn-primary btn-sm">Сохранить</button>
+            </form>
+            <script>document.getElementById('status-select').onchange=function(){ document.getElementById('status-input').value=this.value; };</script>
+            <p class="text-dim" style="margin-top:8px;">Админка:</p>
+            <a href="{{ url_for('admin_grant_admin', user_id=user.id) }}" class="btn-sm {% if user.is_admin %}active{% endif %}">{% if user.is_admin %}Забрать админку{% else %}Сделать админом{% endif %}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="profile-posts">
+    {% for post in posts %}
+    {% set show_comment_form = True %}
+    {% include '_post_card.html' %}
+    {% endfor %}
+</div>
+
+<script>
+document.querySelector('.follow-btn') && document.querySelector('.follow-btn').addEventListener('click', function() {
+    var uid = this.dataset.userId;
+    var btn = this;
+    fetch('/follow/' + uid, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json()).then(function(data) {
+            btn.classList.toggle('following', data.following);
+            btn.textContent = data.following ? 'Отписаться' : 'Подписаться';
+        });
+});
+document.querySelectorAll('.like-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var postId = this.dataset.postId;
+        var el = this;
+        fetch('/post/' + postId + '/like', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('active', data.liked);
+                el.querySelector('.like-count').textContent = data.count;
+                el.querySelector('i').className = data.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+            });
+    });
+});
+document.querySelectorAll('.save-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var postId = this.dataset.postId;
+        var el = this;
+        fetch('/post/' + postId + '/save', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('active', data.saved);
+                el.querySelector('i').className = data.saved ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark';
+            });
+    });
+});
+document.querySelectorAll('.repost-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var postId = this.dataset.postId;
+        var el = this;
+        fetch('/post/' + postId + '/repost', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('active', data.reposted);
+                el.querySelector('.repost-count').textContent = data.count;
+            });
+    });
+});
+document.querySelector('.btn-block') && document.querySelector('.btn-block').addEventListener('click', function() {
+    var uid = this.dataset.userId;
+    var btn = this;
+    fetch('/block/' + uid, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json()).then(function(data) {
+            btn.classList.toggle('blocking', data.blocked);
+            btn.textContent = data.blocked ? 'Разблокировать' : 'Заблокировать';
+        });
+});
+document.body.addEventListener('click', function(e) {
+    var btn = e.target.closest('.comment-like-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var cid = btn.dataset.commentId;
+    fetch('/comment/' + cid + '/like', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json()).then(function(data) { btn.innerHTML = '<i class="fa-regular fa-heart"></i> ' + data.count; });
+});
+var reportBtn = document.querySelector('.btn-report');
+if (reportBtn) {
+    reportBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var uid = this.getAttribute('data-report-user-id');
+        var reason = prompt('Опишите причину жалобы:');
+        if (reason === null) return;
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/report/' + uid;
+        var input = document.createElement('input');
+        input.name = 'reason';
+        input.value = reason;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    });
+}
+</script>
+{% endblock %}

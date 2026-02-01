@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>azaynur</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="sidebar">
+        <h2 class="logo">azaynur</h2>
+
+        <form class="sidebar-search" action="{{ url_for('search') }}" method="GET">
+            <input type="search" name="q" placeholder="Ник или #тег" value="">
+        </form>
+
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}" class="nav-item">Лента</a>
+            <a href="{{ url_for('profile', username=current_user.username) }}" class="nav-item">Профиль</a>
+            <a href="{{ url_for('chats') }}" class="nav-item">Чаты</a>
+            <a href="{{ url_for('notifications') }}" class="nav-item nav-notifications">
+                Уведомления
+                {% if notifications_count %}
+                    <span class="nav-badge">{{ notifications_count }}</span>
+                {% endif %}
+            </a>
+            <a href="{{ url_for('saved') }}" class="nav-item">Закладки</a>
+            <a href="{{ url_for('settings') }}" class="nav-item">Настройки</a>
+
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('admin_panel') }}" class="nav-item admin-link">Админка</a>
+            {% endif %}
+        </div>
+
+        <a href="{{ url_for('logout') }}" class="logout-link">Выйти</a>
+    </nav>
+
+    <main class="main-content">
+        <div class="feed-container">
+            {% block content %}
+            <!-- Контент страниц будет сюда вставляться -->
+            {% endblock %}
+        </div>
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

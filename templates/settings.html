@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="settings-card">
+    <h2>Настройки</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="input-group">
+            <label>Фото профиля</label>
+            <input type="file" name="avatar" accept="image/*">
+        </div>
+        <div class="input-group">
+            <label>О себе</label>
+            <textarea name="bio" rows="3">{{ current_user.bio or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-primary">Сохранить</button>
+    </form>
+</div>
+
+<div class="settings-card verification-block">
+    <h2>Верификация (галочка)</h2>
+    <p class="text-dim">
+        Оставьте заявку на получение галочки. Админ рассмотрит и одобрит синюю (VIP) или розовую (эксклюзив). Опишите, зачем вам нужна галочка.
+    </p>
+    {% if pending %}
+        <p class="flash-msg">У вас уже есть активная заявка. Ожидайте рассмотрения.</p>
+    {% else %}
+        <form method="POST" action="{{ url_for('request_verification') }}">
+            <div class="input-group">
+                <label>Почему нужна галочка</label>
+                <textarea name="reason" rows="3" placeholder="Напишите причину..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Отправить заявку</button>
+        </form>
+    {% endif %}
+</div>
+
+<div class="settings-card logout-block">
+    <h2>Аккаунт</h2>
+    <a href="{{ url_for('logout') }}" class="btn-logout">Выйти из аккаунта</a>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <p class="flash-msg">{{ messages[0] }}</p>
+    {% endif %}
+{% endwith %}
+{% endblock %}

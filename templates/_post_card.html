@@ -1,0 +1,61 @@
+{# Ожидает: post, liked, reposted, saved (опционально), show_comment_form #}
+{% set _saved = saved if saved is defined else [] %}
+{% set _liked = liked if liked is defined else [] %}
+{% set _reposted = reposted if reposted is defined else [] %}
+<article class="feed-card post-card" data-post-id="{{ post.id }}">
+    <div class="post-header">
+        <a href="{{ url_for('profile', username=post.user.username) }}" class="mini-avatar">
+            <img src="{{ url_for('static', filename='uploads/avatars/' + post.user.avatar) }}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ post.user.username }}&size=40&background=25262a&color=8a8d91';">
+        </a>
+        <div class="post-user-info">
+            <a href="{{ url_for('profile', username=post.user.username) }}" class="user-name">
+                {{ post.user.username }}
+                {% if post.user.is_verified %}
+                    {% if post.user.verification_type == 'gold' %}<span class="badge badge-gold"></span>{% endif %}
+                    {% if post.user.verification_type == 'vip' %}<span class="badge badge-vip"></span>{% endif %}
+                    {% if post.user.verification_type == 'exclusive' %}<img src="{{ url_for('static', filename='images/galochka.png') }}" class="badge-exclusive-img" alt="">{% endif %}
+                {% endif %}
+                {% if post.user.is_admin %}<span class="badge-admin">Админ</span>{% endif %}
+            </a>
+            <span class="post-time" title="{{ post.created_at.strftime('%d.%m.%Y %H:%M') if post.created_at else '' }}">{{ post.created_at|time_ago }}{% if post.edited_at %} · ред. {{ post.edited_at|time_ago }}{% endif %}</span>
+            {% if current_user.id == post.user_id %}<a href="{{ url_for('edit_post', post_id=post.id) }}" class="btn-edit-post" title="Редактировать">✎</a>{% endif %}
+        </div>
+    </div>
+    <p class="post-text">{{ post.body|linkify }}</p>
+    {% if post.image %}
+    <div class="post-image-container">
+        <img src="{{ url_for('static', filename='uploads/posts/' + post.image) }}" alt="">
+    </div>
+    {% endif %}
+    <div class="post-stats">
+        <span class="stat-views" title="Просмотры"><i class="fa-solid fa-eye"></i> {{ post.views_count() }}</span>
+        <span class="stat-likes"><button type="button" class="btn-stat like-btn {% if post.id in _liked %}active{% endif %}" data-post-id="{{ post.id }}" title="Нравится"><i class="fa-{% if post.id in _liked %}solid{% else %}regular{% endif %} fa-heart"></i> <em class="like-count">{{ post.likes_count() }}</em></button></span>
+        <span class="stat-comments"><i class="fa-regular fa-comment"></i> {{ post.comments_count() }}</span>
+        <span class="stat-reposts"><button type="button" class="btn-stat repost-btn {% if post.id in _reposted %}active{% endif %}" data-post-id="{{ post.id }}" title="Репост"><i class="fa-solid fa-retweet"></i> <em class="repost-count">{{ post.reposts_count() }}</em></button></span>
+        <span class="stat-save"><button type="button" class="btn-stat save-btn {% if post.id in _saved %}active{% endif %}" data-post-id="{{ post.id }}" title="Сохранить"><i class="fa-{% if post.id in _saved %}solid{% else %}regular{% endif %} fa-bookmark"></i></button></span>
+        {% if current_user.id == post.user_id or current_user.is_admin %}
+        <span class="stat-delete">
+            <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" class="delete-post-form" onsubmit="return confirm('Удалить пост?');" style="display:inline;">
+                <button type="submit" class="btn-stat btn-delete" title="Удалить">Удалить</button>
+            </form>
+        </span>
+        {% endif %}
+    </div>
+    {% if show_comment_form|default(True) %}
+    <div class="post-comments">
+        <form class="comment-form" method="POST" action="{{ url_for('post_comment', post_id=post.id) }}">
+            <input type="text" name="body" placeholder="Написать комментарий..." required maxlength="500">
+            <button type="submit" class="btn-primary btn-sm">Отправить</button>
+        </form>
+        <div class="comments-list">
+            {% for c in post.ordered_comments() %}
+            <div class="comment-item" data-comment-id="{{ c.id }}">
+                <a href="{{ url_for('profile', username=c.user.username) }}" class="comment-user">{{ c.user.username }}</a>
+                <span class="comment-body">{{ c.body|linkify }}</span>
+                <span class="comment-meta">{{ c.created_at|time_ago }}{% if c.edited_at %} · ред.{% endif %} · <button type="button" class="btn-stat comment-like-btn" data-comment-id="{{ c.id }}"><i class="fa-regular fa-heart"></i> {{ c.likes_count() }}</button>{% if current_user.id == c.user_id or current_user.is_admin %} · <a href="{{ url_for('edit_comment_page', comment_id=c.id) }}" class="btn-edit-comment">ред.</a> <form method="POST" action="{{ url_for('delete_comment', comment_id=c.id) }}" class="inline-form" onsubmit="return confirm('Удалить?');" style="display:inline;"><button type="submit" class="btn-stat btn-delete">удалить</button></form>{% endif %}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</article>

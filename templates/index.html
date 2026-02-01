@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="feed-card create-post">
+    <form method="POST" action="{{ url_for('index') }}" enctype="multipart/form-data">
+        <div class="post-input-row">
+            <div class="mini-avatar">
+                <img src="{{ url_for('static', filename='uploads/avatars/' + current_user.avatar) }}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username }}&size=40&background=25262a&color=8a8d91';">
+            </div>
+            <textarea name="body" placeholder="Что нового?" rows="2" required></textarea>
+        </div>
+        <div class="post-actions">
+            <label class="icon-btn" title="Фото"><i class="fa-solid fa-paperclip"></i><input type="file" name="image" accept="image/*" class="post-file-input"></label>
+            <button type="submit" class="btn-primary-blue">Опубликовать</button>
+        </div>
+    </form>
+</div>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}<p class="flash-msg">{{ messages[0] }}</p>{% endif %}
+{% endwith %}
+
+{% for item in feed_items %}
+    {% if item[0] == 'repost' %}
+    <div class="repost-wrapper">
+        <span class="repost-label"><i class="fa-solid fa-retweet"></i> <a href="{{ url_for('profile', username=item[2].user.username) }}">{{ item[2].user.username }}</a> репостнул</span>
+        {% set post = item[1] %}
+        {% set show_comment_form = True %}
+        {% include '_post_card.html' %}
+    </div>
+    {% else %}
+    {% set post = item[1] %}
+    {% set show_comment_form = True %}
+    {% include '_post_card.html' %}
+    {% endif %}
+{% endfor %}
+
+<script>
+document.querySelectorAll('.like-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var postId = this.dataset.postId;
+        var el = this;
+        fetch('/post/' + postId + '/like', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('active', data.liked);
+                el.querySelector('.like-count').textContent = data.count;
+                el.querySelector('i').className = data.liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+            });
+    });
+});
+document.querySelectorAll('.save-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var postId = this.dataset.postId;
+        var el = this;
+        fetch('/post/' + postId + '/save', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('active', data.saved);
+                el.querySelector('i').className = data.saved ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark';
+            });
+    });
+});
+document.querySelectorAll('.repost-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var postId = this.dataset.postId;
+        var el = this;
+        fetch('/post/' + postId + '/repost', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('active', data.reposted);
+                el.querySelector('.repost-count').textContent = data.count;
+            });
+    });
+});
+document.body.addEventListener('click', function(e) {
+    var btn = e.target.closest('.comment-like-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var cid = btn.dataset.commentId;
+    fetch('/comment/' + cid + '/like', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json()).then(function(data) { btn.innerHTML = '<i class="fa-regular fa-heart"></i> ' + data.count; });
+});
+</script>
+{% endblock %}

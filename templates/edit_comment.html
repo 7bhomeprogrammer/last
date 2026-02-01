@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="feed-card">
+    <h2>Редактировать комментарий</h2>
+    <form method="POST" action="{{ url_for('edit_comment_page', comment_id=comment.id) }}">
+        <div class="input-group">
+            <textarea name="body" rows="3" required>{{ comment.body }}</textarea>
+        </div>
+        <button type="submit" class="btn-primary">Сохранить</button>
+        <a href="{{ request.referrer or url_for('index') }}" class="edit-btn">Отмена</a>
+    </form>
+</div>
+{% endblock %}

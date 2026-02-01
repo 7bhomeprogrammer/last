@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-card">
+    <h2>Уведомления</h2>
+    {% for n in notifications %}
+    <div class="notification-item {% if not n.read %}unread{% endif %}">
+        {% if n.from_user %}
+        <a href="{{ url_for('profile', username=n.from_user.username) }}">{{ n.from_user.username }}</a>
+        {% endif %}
+        {% if n.type == 'like' %}лайкнул ваш пост
+            {% if n.post_id %}<a href="{{ url_for('index') }}">→</a>{% endif %}
+        {% elif n.type == 'comment' %}прокомментировал ваш пост
+            {% if n.post_id %}<a href="{{ url_for('index') }}">→</a>{% endif %}
+        {% elif n.type == 'follow' %}подписался на вас
+            <a href="{{ url_for('profile', username=n.from_user.username) }}">→</a>
+        {% elif n.type == 'repost' %}репостнул ваш пост
+            {% if n.post_id %}<a href="{{ url_for('index') }}">→</a>{% endif %}
+        {% elif n.type == 'mention' %}упомянул вас
+            {% if n.post_id %}<a href="{{ url_for('index') }}">→</a>{% endif %}
+        {% endif %}
+        <span class="notif-time">{{ n.created_at|time_ago }}</span>
+    </div>
+    {% endfor %}
+    {% if not notifications %}
+    <p class="text-dim">Нет уведомлений.</p>
+    {% endif %}
+</div>
+{% endblock %}

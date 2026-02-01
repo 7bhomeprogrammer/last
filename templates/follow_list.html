@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="feed-card">
+    <h2><a href="{{ url_for('profile', username=user.username) }}">{{ user.username }}</a> — {{ title }}</h2>
+    <ul class="search-users follow-list">
+        {% for u in users %}
+        <li>
+            <a href="{{ url_for('profile', username=u.username) }}" class="search-user-item">
+                <div class="mini-avatar">
+                    <img src="{{ url_for('static', filename='uploads/avatars/' + u.avatar) }}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ u.username }}&size=40&background=25262a&color=8a8d91';">
+                </div>
+                <span>{{ u.username }}</span>
+                {% if u.is_verified %}
+                    {% if u.verification_type == 'gold' %}<span class="badge badge-gold"></span>{% endif %}
+                    {% if u.verification_type == 'vip' %}<span class="badge badge-vip"></span>{% endif %}
+                    {% if u.verification_type == 'exclusive' %}<img src="{{ url_for('static', filename='images/galochka.png') }}" class="badge-exclusive-img" alt="">{% endif %}
+                {% endif %}
+                {% if u.is_admin %}<span class="badge-admin">Админ</span>{% endif %}
+            </a>
+            {% if current_user.id != u.id %}
+            <button type="button" class="btn-primary btn-sm follow-btn-inline {% if u.id in following_ids %}following{% endif %}" data-user-id="{{ u.id }}">{% if u.id in following_ids %}Отписаться{% else %}Подписаться{% endif %}</button>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% if not users %}
+    <p class="text-dim">Пусто.</p>
+    {% endif %}
+</div>
+<script>
+document.querySelectorAll('.follow-btn-inline').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var uid = this.dataset.userId;
+        var el = this;
+        fetch('/follow/' + uid, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(function(data) {
+                el.classList.toggle('following', data.following);
+                el.textContent = data.following ? 'Отписаться' : 'Подписаться';
+            });
+    });
+});
+</script>
+{% endblock %}

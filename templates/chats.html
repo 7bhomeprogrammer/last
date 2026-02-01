@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-card">
+    <h2>Чаты</h2>
+    <p class="text-dim">Выберите диалог или начните общение с пользователем через его профиль.</p>
+    <ul class="chat-list">
+        {% for peer, last_msg in convos %}
+        <li>
+            <a href="{{ url_for('chat', user_id=peer.id) }}" class="chat-list-item">
+                <div class="mini-avatar">
+                    <img src="{{ url_for('static', filename='uploads/avatars/' + peer.avatar) }}" alt="" onerror="this.src='https://ui-avatars.com/api/?name={{ peer.username }}&size=40&background=25262a&color=8a8d91';">
+                </div>
+                <div class="chat-list-info">
+                    <span class="chat-peer-name">{{ peer.username }}</span>
+                    <span class="chat-preview">{{ last_msg.body[:50] }}{% if last_msg.body|length > 50 %}...{% endif %}</span>
+                </div>
+                <span class="chat-time">{{ last_msg.created_at|time_ago }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% if not convos %}
+    <p class="text-dim">Пока нет диалогов. Откройте профиль пользователя и напишите ему.</p>
+    {% endif %}
+</div>
+{% endblock %}

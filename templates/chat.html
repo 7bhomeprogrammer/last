@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="chat-card feed-card">
+    <h2><a href="{{ url_for('profile', username=peer.username) }}">{{ peer.username }}</a></h2>
+    <div class="chat-messages">
+        {% for m in messages %}
+        <div class="chat-msg {% if m.sender_id == current_user.id %}own{% else %}peer{% endif %}">
+            <span class="chat-msg-body">{{ m.body }}</span>
+            <span class="chat-msg-time">{{ m.created_at.strftime('%H:%M') if m.created_at else '' }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <form method="POST" action="{{ url_for('chat', user_id=peer.id) }}" class="chat-form">
+        <input type="text" name="body" placeholder="Сообщение..." required maxlength="1000" autocomplete="off">
+        <button type="submit" class="btn-primary">Отправить</button>
+    </form>
+</div>
+{% endblock %}

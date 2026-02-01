@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>azaynur - Вход</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <form class="auth-form" method="POST">
+            <h2>azaynur</h2>
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <p style="color: var(--error); font-size: 13px; margin-bottom: 10px;">{{ messages[0] }}</p>
+              {% endif %}
+            {% endwith %}
+            <div class="input-group">
+                <input type="email" name="email" placeholder="Email" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="password" placeholder="Пароль" required>
+            </div>
+            <button type="submit" class="btn-primary">Войти</button>
+            <a href="{{ url_for('forgot_password') }}" class="auth-link">Забыл пароль</a>
+            <a href="{{ url_for('register') }}" class="auth-link">Нет аккаунта? Зарегистрироваться</a>
+        </form>
+    </div>
+</body>
+</html>

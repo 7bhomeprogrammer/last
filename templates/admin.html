@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-card">
+    <h2>Управление верификацией</h2>
+    <p><a href="{{ url_for('admin_reports') }}" class="auth-link">Жалобы пользователей →</a></p>
+    {% for req in requests %}
+    <div class="request-item">
+        <div>
+            <strong>{{ req.user.username }}</strong> — заявка на галочку
+            {% if req.reason %}<p class="request-reason">{{ req.reason }}</p>{% endif %}
+            <form method="POST" action="{{ url_for('admin_set_status', user_id=req.user.id) }}" class="status-form">
+                <input type="text" name="custom_status" value="{{ req.user.custom_status or '' }}" placeholder="Статус (напр. Пикми)" maxlength="100">
+                <button type="submit" class="btn-primary btn-sm">Задать статус</button>
+            </form>
+        </div>
+        <div class="request-actions">
+            <a href="{{ url_for('verify_user', request_id=req.id, v_type='vip') }}" class="vip-link">Синяя (VIP)</a>
+            <span class="text-dim"> · </span>
+            <a href="{{ url_for('verify_user', request_id=req.id, v_type='exclusive') }}" class="exclusive-link">Розовая</a>
+            <span class="text-dim"> · </span>
+            <a href="{{ url_for('reject_verification', request_id=req.id) }}" class="reject-link">Отклонить</a>
+        </div>
+    </div>
+    {% endfor %}
+    {% if not requests %}
+    <p class="text-dim">Нет заявок.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="feed-card">
+    <h2>Редактировать пост</h2>
+    <form method="POST">
+        <div class="input-group">
+            <textarea name="body" rows="4" required>{{ post.body }}</textarea>
+        </div>
+        <button type="submit" class="btn-primary">Сохранить</button>
+        <a href="{{ request.referrer or url_for('index') }}" class="edit-btn">Отмена</a>
+    </form>
+</div>
+{% endblock %}
