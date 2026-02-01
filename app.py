@@ -246,18 +246,10 @@ def is_blocked(viewer_id, target_id):
             Block.query.filter_by(blocker_id=target_id, blocked_id=viewer_id).first() is not None)
 
 
-def send_email(to_email, subject, body):
-    """Отправка письма. По умолчанию выводит в консоль (для разработки)."""
-    msg = f'[EMAIL] To: {to_email}\nSubject: {subject}\n\n{body}\n'
-    try:
-        print(msg)
-    except UnicodeEncodeError:
-        # Если консоль не поддерживает символы, заменяем неподдерживаемые
-        print(msg.encode(sys.stdout.encoding, errors='replace').decode(sys.stdout.encoding))
-    print(msg)
+
     
 
-    # TODO: подключить SMTP (flask-mail или smtplib) по app.config.get('MAIL_SERVER')
+    # T: подключить SMTP (flask-mail или smtplib) по app.config.get('MAIL_SERVER')
 
 
 def linkify_post(text):
@@ -606,78 +598,41 @@ def _generate_code():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
     if request.method == 'POST':
-        username = (request.form.get('username') or '').strip()
-        email = (request.form.get('email') or '').strip()
+        username = request.form.get('username')  # убедись, что в форме есть это поле
+        email = request.form.get('email')
         password = request.form.get('password')
+
         if not username or not email or not password:
             flash('Заполните все поля')
-            return redirect(url_for('register'))
-        if User.query.filter_by(username=username).first():
-            flash('Такой никнейм уже занят')
-            return redirect(url_for('register'))
-        if User.query.filter_by(email=email).first():
-            flash('Такой email уже зарегистрирован')
-            return redirect(url_for('register'))
-        code = _generate_code()
-        EmailVerificationCode.query.filter_by(email=email).delete()
-        db.session.add(EmailVerificationCode(email=email, code=code, expires_at=datetime.utcnow() + timedelta(minutes=15)))
-        db.session.commit()
-        send_email(email, 'Код подтверждения azaunur', f'Ваш код: {code}\nКод действителен 15 минут.')
-        session['pending_reg'] = {'username': username, 'email': email, 'password': generate_password_hash(password)}
-        return redirect(url_for('register_verify'))
-    return render_template('register.html')
+            return render_template('register.html')
 
+        # Проверка на существующего пользователя
+        if User.query.filter((User.email == email) | (User.username == username)).first():
+            flash('Пользователь уже существует')
+            return render_template('register.html')
 
-@app.route('/register/verify', methods=['GET', 'POST'])
-def register_verify():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    if 'pending_reg' not in session:
-        flash('Сначала заполните форму регистрации')
-        return redirect(url_for('register'))
-    if request.method == 'POST':
-        code = (request.form.get('code') or '').strip()
-        if not code:
-            flash('Введите код из письма')
-            return redirect(url_for('register_verify'))
-        pr = session['pending_reg']
-        row = EmailVerificationCode.query.filter_by(email=pr['email'], code=code).first()
-        if not row or row.expires_at < datetime.utcnow():
-            flash('Неверный или устаревший код')
-            return redirect(url_for('register_verify'))
-        EmailVerificationCode.query.filter_by(email=pr['email']).delete()
-        db.session.commit()
-        new_user = User(username=pr['username'], email=pr['email'], password=pr['password'])
+        # Если хочешь оставлять пароль без хэширования (не безопасно)
+        new_user = User(
+            username=username,
+            email=email,
+            password=password,  # здесь лучше generate_password_hash(password)
+            avatar='default.jpg'
+        )
+
         db.session.add(new_user)
         db.session.commit()
-        session.pop('pending_reg', None)
-        flash('Регистрация завершена. Войдите.')
-        return redirect(url_for('login'))
-    return render_template('register_verify.html')
+
+        flash('Регистрация прошла успешно!')
+        return redirect(url_for('login'))  # Важно вернуть redirect
+
+    return render_template('register.html')  # Это на случай GET-запроса
 
 
-@app.route('/forgot', methods=['GET', 'POST'])
-def forgot_password():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    if request.method == 'POST':
-        email = (request.form.get('email') or '').strip()
-        if not email:
-            flash('Введите email')
-            return redirect(url_for('forgot_password'))
-        if User.query.filter_by(email=email).first():
-            code = _generate_code()
-            PasswordResetCode.query.filter_by(email=email).delete()
-            db.session.add(PasswordResetCode(email=email, code=code, expires_at=datetime.utcnow() + timedelta(minutes=15)))
-            db.session.commit()
-            send_email(email, 'Восстановление пароля azaunur', f'Ваш код: {code}\nКод действителен 15 минут.')
-        session['reset_email'] = email
-        flash('Если аккаунт с таким email есть, на него отправлен код')
-        return redirect(url_for('reset_password'))
-    return render_template('forgot_password.html')
+
+
+
+
 
 
 @app.route('/reset', methods=['GET', 'POST'])
@@ -711,17 +666,31 @@ def reset_password():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
     if request.method == 'POST':
-        user = User.query.filter_by(email=request.form.get('email')).first()
-        if user and check_password_hash(user.password, request.form.get('password')):
-            if getattr(user, 'banned_until', None) and user.banned_until and user.banned_until > datetime.utcnow():
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash('Неверный email или пароль')
+            return render_template('login.html')
+
+        # Если пароль хранится в открытом виде (не безопасно):
+        if user.password != password:
+            flash('Неверный email или пароль')
+            return render_template('login.html')
+
+        # Если пользователь забанен
+        if getattr(user, 'banned_until', None):
+            if user.banned_until and user.banned_until > datetime.utcnow():
                 flash(f'Аккаунт заблокирован до {user.banned_until.strftime("%d.%m.%Y %H:%M")}')
                 return render_template('login.html')
-            login_user(user)
-            return redirect(url_for('index'))
-        flash('Неверный email или пароль')
+
+        login_user(user)
+        flash('Вы успешно вошли!')
+        return redirect(url_for('index'))
+
     return render_template('login.html')
 
 

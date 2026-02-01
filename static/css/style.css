@@ -730,3 +730,125 @@ textarea {
         padding: 16px;
     }
 }
+
+/* ====== Адаптив для телефонов ====== */
+@media (max-width: 480px) {
+    html, body {
+        font-size: 14px; /* чуть меньше шрифт */
+        overflow-x: hidden; /* убираем горизонтальный скролл */
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-right: none;
+        border-bottom: var(--border);
+    }
+
+    .sidebar .logo {
+        font-size: 1.2rem;
+        margin-bottom: 0;
+    }
+
+    .nav-links {
+        flex-direction: row;
+        flex: 1;
+        justify-content: space-around;
+        gap: 4px;
+        order: 2;
+    }
+
+    .logout-link {
+        margin-top: 0;
+        order: 3;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 12px 10px;
+        justify-content: flex-start;
+    }
+
+    .feed-container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .feed-card,
+    .post-card,
+    .create-post,
+    .settings-card,
+    .admin-card,
+    .auth-form,
+    .profile-header {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 12px;
+        border-radius: 10px;
+    }
+
+    .create-post textarea,
+    input,
+    .status-form input,
+    .chat-form input {
+        font-size: 14px;
+    }
+
+    .post-user-info,
+    .comment-item {
+        font-size: 13px;
+    }
+
+    .post-text,
+    .comment-body,
+    .post-stats {
+        font-size: 14px;
+    }
+
+    .profile-info h1 {
+        font-size: 20px;
+    }
+
+    .profile-stats {
+        gap: 12px;
+        font-size: 13px;
+    }
+
+    .chat-messages {
+        max-height: 300px;
+        padding: 12px 0;
+    }
+
+    .chat-msg-body {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+
+    .btn-primary,
+    .btn-primary-blue,
+    .edit-btn,
+    .btn-chat,
+    .btn-sm {
+        font-size: 13px;
+        padding: 8px 14px;
+    }
+
+    /* Уменьшаем размеры аватарок */
+    .mini-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .avatar-container {
+        width: 80px;
+        height: 80px;
+    }
+}
