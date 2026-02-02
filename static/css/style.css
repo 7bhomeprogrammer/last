@@ -695,6 +695,21 @@ textarea {
 .chat-form { display: flex; gap: 8px; margin-top: 12px; }
 .chat-form input { flex: 1; }
 
+/* Онлайн-статус */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 6px;
+    background: #555;
+}
+
+.status-dot.online {
+    background: #3fb950;
+    box-shadow: 0 0 0 2px rgba(63, 185, 80, 0.3);
+}
+
 /* ========== Адаптив ========== */
 @media (max-width: 768px) {
     .sidebar {
@@ -749,6 +764,17 @@ textarea {
         padding: 10px 12px;
         border-right: none;
         border-bottom: var(--border);
+    }
+
+    .sidebar-search {
+        width: 100%;
+        order: 3;
+        margin-top: 8px;
+    }
+
+    .sidebar-search input {
+        padding: 6px 10px;
+        font-size: 13px;
     }
 
     .sidebar .logo {
@@ -841,6 +867,21 @@ textarea {
         padding: 8px 14px;
     }
 
+    .nav-item {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .post-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .post-actions .btn-primary-blue {
+        flex: 1;
+        text-align: center;
+    }
+
     /* Уменьшаем размеры аватарок */
     .mini-avatar {
         width: 32px;
@@ -850,5 +891,25 @@ textarea {
     .avatar-container {
         width: 80px;
         height: 80px;
+    }
+
+    .profile-header .edit-btn,
+    .profile-header .btn-chat,
+    .profile-header .btn-block,
+    .profile-header .btn-report {
+        width: 100%;
+        text-align: center;
+    }
+
+    .edit-btn + .edit-btn,
+    .edit-btn + .btn-chat,
+    .follow-btn + .btn-chat {
+        margin-left: 0;
+        margin-top: 8px;
+    }
+
+    .comment-form,
+    .chat-form {
+        flex-wrap: wrap;
     }
 }

@@ -1,23 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Статистика</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; color: #333; padding: 20px; }
-        h1 { color: #2c3e50; }
-        ul { list-style: none; padding: 0; }
-        li { background: #fff; margin: 5px 0; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
-    </style>
-</head>
-<body>
-<h1>Статистика сайта</h1>
-<ul>
-  <li>Всего пользователей: {{ total_users }}</li>
-  <li>Всего постов: {{ total_posts }}</li>
-  <li>Всего комментариев: {{ total_comments }}</li>
-  <li>Всего сообщений: {{ total_messages }}</li>
-  <li>Активные сегодня: {{ active_today }}</li>
-</ul>
-</body>
-</html>
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-card">
+    <h2>Статистика</h2>
+    <ul class="stats-list">
+        <li><span>Всего пользователей</span><strong>{{ total_users }}</strong></li>
+        <li><span>Всего постов</span><strong>{{ total_posts }}</strong></li>
+        <li><span>Всего комментариев</span><strong>{{ total_comments }}</strong></li>
+        <li><span>Всего сообщений</span><strong>{{ total_messages }}</strong></li>
+        <li><span>Активные сегодня</span><strong>{{ active_today }}</strong></li>
+    </ul>
+</div>
+{% endblock %}

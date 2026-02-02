@@ -7,6 +7,13 @@
     <div class="profile-info">
         <h1>
             {{ user.username }}
+            {% if user.last_seen %}
+                {% if is_online %}
+                    <span class="status-dot online" title="В сети"></span>
+                {% else %}
+                    <span class="status-dot" title="Был(а) в сети {{ last_seen_human }}"></span>
+                {% endif %}
+            {% endif %}
             {% if user.is_verified %}
                 {% if user.verification_type == 'gold' %}<span class="badge badge-gold"></span>{% endif %}
                 {% if user.verification_type == 'vip' %}<span class="badge badge-vip"></span>{% endif %}

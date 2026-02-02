@@ -42,6 +42,7 @@ class User(UserMixin, db.Model):
     custom_status = db.Column(db.String(100), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     banned_until = db.Column(db.DateTime, nullable=True)
+    last_seen = db.Column(db.DateTime, nullable=True)
 
     def is_banned(self):
         return self.banned_until and self.banned_until > datetime.utcnow()
@@ -114,6 +115,8 @@ class Comment(db.Model):
     edited_at = db.Column(db.DateTime, nullable=True)
     post = db.relationship('Post', backref=db.backref('comments', lazy='dynamic'))
     user = db.relationship('User', backref=db.backref('comments', lazy='dynamic'))
+    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
+    parent = db.relationship('Comment', remote_side=[id], backref=db.backref('replies', lazy='dynamic'))
 
     def likes_count(self):
         return CommentLike.query.filter_by(comment_id=self.id).count()
@@ -221,6 +224,15 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+@app.before_request
+def update_last_seen():
+    if current_user.is_authenticated:
+        now = datetime.utcnow()
+        if not current_user.last_seen or (now - current_user.last_seen).total_seconds() > 60:
+            current_user.last_seen = now
+            db.session.commit()
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -278,7 +290,7 @@ def notify_mentions(text, from_user_id, post_id=None, comment_id=None):
 
 
 # --- ROUTES ---
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
     if request.method == 'POST':
@@ -377,9 +389,17 @@ def post_repost(post_id):
 def post_comment(post_id):
     post = Post.query.get_or_404(post_id)
     body = (request.form.get('body') or '').strip()
+    parent_id = request.form.get('parent_id')
     if not body:
         return redirect(url_for('index'))
     c = Comment(post_id=post_id, user_id=current_user.id, body=body)
+    if parent_id:
+        try:
+            parent = Comment.query.get(int(parent_id))
+            if parent and parent.post_id == post_id:
+                c.parent_id = parent.id
+        except ValueError:
+            pass
     db.session.add(c)
     db.session.commit()
     notify(post.user_id, current_user.id, 'comment', post_id=post_id, comment_id=c.id)
@@ -599,8 +619,8 @@ def _generate_code():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')  # убедись, что в форме есть это поле
-        email = request.form.get('email')
+        username = (request.form.get('username') or '').strip()
+        email = (request.form.get('email') or '').strip()
         password = request.form.get('password')
 
         if not username or not email or not password:
@@ -612,11 +632,10 @@ def register():
             flash('Пользователь уже существует')
             return render_template('register.html')
 
-        # Если хочешь оставлять пароль без хэширования (не безопасно)
         new_user = User(
             username=username,
             email=email,
-            password=password,  # здесь лучше generate_password_hash(password)
+            password=generate_password_hash(password),
             avatar='default.jpg'
         )
 
@@ -633,6 +652,32 @@ def register():
 
 
 
+
+
+@app.route('/forgot', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip()
+        if not email:
+            flash('Введите email')
+            return redirect(url_for('forgot_password'))
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('Пользователь с таким email не найден')
+            return redirect(url_for('forgot_password'))
+        code = _generate_code()
+        PasswordResetCode.query.filter_by(email=email).delete()
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
+        db.session.add(PasswordResetCode(email=email, code=code, expires_at=expires_at))
+        db.session.commit()
+        session['reset_email'] = email
+        # В реальном проекте код должен уходить на почту.
+        # Временно показываем код прямо на сайте, чтобы можно было пользоваться без SMTP.
+        flash(f'Код для сброса пароля: {code}')
+        return redirect(url_for('reset_password'))
+    return render_template('forgot_password.html')
 
 
 @app.route('/reset', methods=['GET', 'POST'])
@@ -676,8 +721,8 @@ def login():
             flash('Неверный email или пароль')
             return render_template('login.html')
 
-        # Если пароль хранится в открытом виде (не безопасно):
-        if user.password != password:
+        # Проверяем хэш пароля
+        if not check_password_hash(user.password, password):
             flash('Неверный email или пароль')
             return render_template('login.html')
 
@@ -724,7 +769,17 @@ def profile(username):
     liked = {r.post_id for r in PostLike.query.filter(PostLike.post_id.in_(post_ids), PostLike.user_id == current_user.id).all()} if post_ids else set()
     reposted = {r.post_id for r in Repost.query.filter(Repost.post_id.in_(post_ids), Repost.user_id == current_user.id).all()} if post_ids else set()
     saved = {s.post_id for s in SavedPost.query.filter(SavedPost.post_id.in_(post_ids), SavedPost.user_id == current_user.id).all()} if post_ids else set()
-    return render_template('profile.html', user=user, posts=posts, is_following=is_following, is_blocking=is_blocking, liked=liked, reposted=reposted, saved=saved)
+    # Онлайн-статус для профиля
+    is_online = False
+    last_seen_human = ''
+    if getattr(user, 'last_seen', None):
+        delta = datetime.utcnow() - user.last_seen
+        is_online = delta.total_seconds() < 120
+        last_seen_human = time_ago(user.last_seen)
+    return render_template('profile.html', user=user, posts=posts,
+                           is_following=is_following, is_blocking=is_blocking,
+                           liked=liked, reposted=reposted, saved=saved,
+                           is_online=is_online, last_seen_human=last_seen_human)
 
 
 @app.route('/u/<username>/followers')
@@ -1008,6 +1063,19 @@ if __name__ == '__main__':
         try:
             from sqlalchemy import text
             db.session.execute(text('ALTER TABLE comment ADD COLUMN edited_at DATETIME'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        # Новые колонки для last_seen и parent_id
+        try:
+            from sqlalchemy import text
+            db.session.execute(text('ALTER TABLE user ADD COLUMN last_seen DATETIME'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        try:
+            from sqlalchemy import text
+            db.session.execute(text('ALTER TABLE comment ADD COLUMN parent_id INTEGER'))
             db.session.commit()
         except Exception:
             db.session.rollback()

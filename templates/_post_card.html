@@ -48,11 +48,37 @@
             <button type="submit" class="btn-primary btn-sm">Отправить</button>
         </form>
         <div class="comments-list">
-            {% for c in post.ordered_comments() %}
+            {% for c in post.ordered_comments() if not c.parent_id %}
             <div class="comment-item" data-comment-id="{{ c.id }}">
                 <a href="{{ url_for('profile', username=c.user.username) }}" class="comment-user">{{ c.user.username }}</a>
                 <span class="comment-body">{{ c.body|linkify }}</span>
-                <span class="comment-meta">{{ c.created_at|time_ago }}{% if c.edited_at %} · ред.{% endif %} · <button type="button" class="btn-stat comment-like-btn" data-comment-id="{{ c.id }}"><i class="fa-regular fa-heart"></i> {{ c.likes_count() }}</button>{% if current_user.id == c.user_id or current_user.is_admin %} · <a href="{{ url_for('edit_comment_page', comment_id=c.id) }}" class="btn-edit-comment">ред.</a> <form method="POST" action="{{ url_for('delete_comment', comment_id=c.id) }}" class="inline-form" onsubmit="return confirm('Удалить?');" style="display:inline;"><button type="submit" class="btn-stat btn-delete">удалить</button></form>{% endif %}</span>
+                <span class="comment-meta">
+                    {{ c.created_at|time_ago }}{% if c.edited_at %} · ред.{% endif %}
+                    · <button type="button" class="btn-stat comment-like-btn" data-comment-id="{{ c.id }}"><i class="fa-regular fa-heart"></i> {{ c.likes_count() }}</button>
+                    · <button type="button" class="btn-stat btn-reply" data-comment-id="{{ c.id }}" data-username="{{ c.user.username }}">ответить</button>
+                    {% if current_user.id == c.user_id or current_user.is_admin %}
+                        · <a href="{{ url_for('edit_comment_page', comment_id=c.id) }}" class="btn-edit-comment">ред.</a>
+                        <form method="POST" action="{{ url_for('delete_comment', comment_id=c.id) }}" class="inline-form" onsubmit="return confirm('Удалить?');" style="display:inline;">
+                            <button type="submit" class="btn-stat btn-delete">удалить</button>
+                        </form>
+                    {% endif %}
+                </span>
+                {% for r in c.replies.order_by(c.__class__.created_at.asc()).all() %}
+                <div class="comment-item comment-reply" data-comment-id="{{ r.id }}">
+                    <a href="{{ url_for('profile', username=r.user.username) }}" class="comment-user">{{ r.user.username }}</a>
+                    <span class="comment-body">{{ r.body|linkify }}</span>
+                    <span class="comment-meta">
+                        {{ r.created_at|time_ago }}{% if r.edited_at %} · ред.{% endif %}
+                        · <button type="button" class="btn-stat comment-like-btn" data-comment-id="{{ r.id }}"><i class="fa-regular fa-heart"></i> {{ r.likes_count() }}</button>
+                        {% if current_user.id == r.user_id or current_user.is_admin %}
+                            · <a href="{{ url_for('edit_comment_page', comment_id=r.id) }}" class="btn-edit-comment">ред.</a>
+                            <form method="POST" action="{{ url_for('delete_comment', comment_id=r.id) }}" class="inline-form" onsubmit="return confirm('Удалить?');" style="display:inline;">
+                                <button type="submit" class="btn-stat btn-delete">удалить</button>
+                            </form>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
             </div>
             {% endfor %}
         </div>
